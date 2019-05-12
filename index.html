@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=UTF-8>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="Summary">
+    <meta property="og:url" content="https://okdyy75.github.io/hankei/">
+    <meta property="og:title" content="Hankei250">
+    <meta property="og:description" content="半径〇〇mを範囲検索することが出来るツールです。">
+    <meta property="og:image" content="https://okdyy75.github.io/hankei/img/hankei.jpg">
+
+
+    <title>Hankei250</title>
+    <!-- Google Maps API -->
+    <script
+        src="https://maps.google.com/maps/api/js?key=AIzaSyA8_G39ESdD3X-KEBgwAYbFTM8n3fhV08U&libraries=places&language=ja"></script>
+    <!-- Bulma -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            var map = null;
+            var service = null;
+            var marker = null;
+            var circle = null;
+
+            getLocation().then(function (latLng) {
+
+                var latLng = latLng || new google.maps.LatLng(35.6811673, 139.7670516); // 現在位置 or 東京駅
+                var hankei = 250;
+
+                map = new google.maps.Map(document.getElementById('map'), {
+                    gestureHandling: 'greedy', // スマートフォンなどにおけるタッチ操作
+                    streetViewControl: false, // ストリートビューの有無
+                    zoom: 15,      //地図の縮尺値
+                    center: latLng,    //地図の中心座標
+                    mapTypeId: 'roadmap'   //地図の種類
+                });
+                map.addListener('click', function (e) {
+
+                    var hankei = document.getElementById("hankei").value || 250;
+                    searchHankei(e.latLng, hankei);
+                });
+
+                searchHankei(latLng, hankei);
+            });
+
+            // 半径入力
+            document.getElementById("hankei").onchange = function () {
+                var hankei = document.getElementById("hankei").value;
+                document.getElementById("hankei").value = hankei.replace(/^[^0-9]+$/g, '');
+            }
+
+            // 半径検索
+            document.getElementById("hankeiBtn").onclick = function () {
+                var hankei = document.getElementById("hankei").value || 250;
+                var latLng = new google.maps.LatLng(35.6811673, 139.7670516); // 東京駅
+
+                if (marker) {
+                    latLng = marker.position;
+                }
+
+                searchHankei(latLng, hankei);
+                return false;
+            }
+
+            // 場所+半径で検索
+            document.getElementById("hankeiForm").onsubmit = function () {
+
+                var place = document.getElementById("place").value;
+                var hankei = document.getElementById("hankei").value || 250;
+                var latLng = new google.maps.LatLng(35.6811673, 139.7670516); // 東京駅
+
+                if (marker) {
+                    latLng = marker.position;
+                }
+
+                if (place) {
+                    service = new google.maps.places.PlacesService(map);
+                    service.findPlaceFromQuery({
+                        query: place,
+                        fields: ['name', 'formatted_address', 'geometry', 'place_id']
+                    }, function (results, status) {
+                        if (status == google.maps.places.PlacesServiceStatus.OK) {
+                            // 配列だが、1件のみ返ってくる
+                            searchHankei(results[0].geometry.location, hankei);
+                        }
+
+                        return false;
+                    });
+                } else {
+                    searchHankei(latLng, hankei);
+                }
+                return false;
+            }
+
+            // 指定位置に円描写
+            function searchHankei(latLng, hankei) {
+
+                // 一度立てたマーカー、円は削除
+                if (marker) {
+                    marker.setMap(null);
+                }
+                if (circle) {
+                    circle.setMap(null);
+                }
+
+                // クリックする場所にマーカーを立てる
+                marker = new google.maps.Marker({
+                    position: latLng,
+                    map: map,
+                    animation: google.maps.Animation.DROP // マーカーを立つときのアニメーション
+                });
+
+                map.panTo(latLng); // マーカー位置に移動
+
+                // 円描画
+                circle = new google.maps.Circle({
+                    center: latLng,
+                    map: map,
+                    radius: parseInt(hankei),	// 半径（m）
+                    // fillColor: '#FF0000', 		// 塗りつぶし色
+                    fillOpacity: 0,		// 塗りつぶし透過度（0: 透明 ⇔ 1:不透明）
+                    strokeColor: '#FF0000',		// 外周色
+                    strokeOpacity: 1,	// 外周透過度（0: 透明 ⇔ 1:不透明）
+                    strokeWeight: 1		// 外周太さ
+                });
+                circle.addListener('click', function (e) {
+                    searchHankei(e.latLng, document.getElementById("hankei").value);
+                });
+            }
+
+            // 現在地取得処理
+            function getLocation() {
+                // Geolocation APIに対応していない
+                if (!navigator.geolocation) {
+                    alert("この端末では位置情報が取得できません");
+                    return;
+                }
+                // 現在地を取得
+                return new Promise(function (resolve, reject) {
+                    navigator.geolocation.getCurrentPosition(
+                        function (position) {
+                            var mapLatLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                            resolve(mapLatLng);
+                        },
+                        function (error) {
+                            switch (error.code) {
+                                case 1: // PERMISSION_DENIED
+                                    alert("位置情報の利用が許可されていません");
+                                    break;
+                                case 2: // POSITION_UNAVAILABLE
+                                    alert("現在位置が取得できませんでした");
+                                    break;
+                                case 3: // TIMEOUT
+                                    alert("タイムアウトになりました");
+                                    break;
+                                default:
+                                    alert("その他のエラー(エラーコード:" + error.code + ")");
+                                    break;
+                            }
+                            resolve(null);
+                        }
+                    );
+                });
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <section class="hero is-fullheight">
+        <div class="hero-head" style="margin: 1em;">
+            <h1 class="title">Hankei250</h1>
+            <h2 class="subtitle">半径〇〇m検索ツール</h2>
+        </div>
+        <div class="hero-body" id="map">
+        </div>
+        <div class="hero-foot">
+            <form id="hankeiForm">
+                <div class="field has-addons" style="margin: 1em;">
+                    <div class="control">
+                        <input type="text" placeholder="場所" class="input" id="place">
+                    </div>
+                    <div class="control">
+                        <input type="submit" class="button is-primary" id="placeBtn" value="検索">
+                    </div>
+                </div>
+            </form>
+            <div class="field has-addons" style="margin: 1em;">
+                <div class="control">
+                    <input type="text" placeholder="半径" class="input" id="hankei">
+                </div>
+                <div class="control">
+                    <input type="button" class="button is-primary" id="hankeiBtn" value="m 周辺">
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>
