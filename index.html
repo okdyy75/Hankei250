@@ -19,9 +19,21 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css">
     <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
 
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-143165384-2"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'UA-143165384-2');
+    </script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
 
+            var tokyoLatLng = new google.maps.LatLng(35.6811673, 139.7670516); // 東京駅
+            var hereLatLng = null
             var map = null;
             var service = null;
             var marker = null;
@@ -29,7 +41,7 @@
 
             getLocation().then(function (latLng) {
 
-                var latLng = latLng || new google.maps.LatLng(35.6811673, 139.7670516); // 現在位置 or 東京駅
+                var latLng = latLng || tokyoLatLng; // 現在位置 or 東京駅
                 var hankei = 250;
 
                 map = new google.maps.Map(document.getElementById('map'), {
@@ -40,7 +52,6 @@
                     mapTypeId: 'roadmap'   //地図の種類
                 });
                 map.addListener('click', function (e) {
-
                     var hankei = document.getElementById("hankei").value || 250;
                     searchHankei(e.latLng, hankei);
                 });
@@ -48,23 +59,20 @@
                 searchHankei(latLng, hankei);
             });
 
+            // 現在地ボタン
+            document.getElementById("hereBtn").onclick = function () {
+                var hankei = document.getElementById("hankei").value || 250;
+                getLocation().then(function (latLng) {
+                    if (latLng) {
+                        searchHankei(latLng, hankei);
+                    }
+                });
+            }
+
             // 半径入力
             document.getElementById("hankei").onchange = function () {
                 var hankei = document.getElementById("hankei").value;
                 document.getElementById("hankei").value = hankei.replace(/^[^0-9]+$/g, '');
-            }
-
-            // 半径検索
-            document.getElementById("hankeiBtn").onclick = function () {
-                var hankei = document.getElementById("hankei").value || 250;
-                var latLng = new google.maps.LatLng(35.6811673, 139.7670516); // 東京駅
-
-                if (marker) {
-                    latLng = marker.position;
-                }
-
-                searchHankei(latLng, hankei);
-                return false;
             }
 
             // 場所+半径で検索
@@ -72,7 +80,7 @@
 
                 var place = document.getElementById("place").value;
                 var hankei = document.getElementById("hankei").value || 250;
-                var latLng = new google.maps.LatLng(35.6811673, 139.7670516); // 東京駅
+                var latLng = hereLatLng || tokyoLatLng; // 現在位置 or 東京駅
 
                 if (marker) {
                     latLng = marker.position;
@@ -86,9 +94,9 @@
                     }, function (results, status) {
                         if (status == google.maps.places.PlacesServiceStatus.OK) {
                             // 配列だが、1件のみ返ってくる
-                            searchHankei(results[0].geometry.location, hankei);
+                            latLng = results[0].geometry.location
                         }
-
+                        searchHankei(latLng, hankei);
                         return false;
                     });
                 } else {
@@ -129,7 +137,9 @@
                     strokeWeight: 1		// 外周太さ
                 });
                 circle.addListener('click', function (e) {
-                    searchHankei(e.latLng, document.getElementById("hankei").value);
+                    var hankei = document.getElementById("hankei").value || 250;
+                    var latLng = e.latLng
+                    searchHankei(e.latLng, hankei);
                 });
             }
 
@@ -145,6 +155,7 @@
                     navigator.geolocation.getCurrentPosition(
                         function (position) {
                             var mapLatLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                            hereLatLng = mapLatLng
                             resolve(mapLatLng);
                         },
                         function (error) {
@@ -186,18 +197,21 @@
                         <input type="text" placeholder="場所" class="input" id="place">
                     </div>
                     <div class="control">
-                        <input type="submit" class="button is-primary" id="placeBtn" value="検索">
+                        <input type="submit" class="button is-primary is-outlined" id="placeBtn" value="検索">
+                    </div>
+                    <div class="control">
+                        <input type="button" class="button is-primary is-outlined" id="hereBtn" value="現在地">
+                    </div>
+                </div>
+                <div class="field has-addons" style="margin: 1em;">
+                    <div class="control">
+                        <input type="text" placeholder="半径" class="input" id="hankei">
+                    </div>
+                    <div class="control">
+                        <input type="submit" class="button is-primary" id="hankeiBtn" value="m 周辺">
                     </div>
                 </div>
             </form>
-            <div class="field has-addons" style="margin: 1em;">
-                <div class="control">
-                    <input type="text" placeholder="半径" class="input" id="hankei">
-                </div>
-                <div class="control">
-                    <input type="button" class="button is-primary" id="hankeiBtn" value="m 周辺">
-                </div>
-            </div>
         </div>
     </section>
 </body>
