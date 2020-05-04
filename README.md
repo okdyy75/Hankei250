@@ -1,7 +1,7 @@
-# hankei
+# Hankei250
 半径〇〇mの範囲を検索するツールです。  
-URL：https://okdyy75.github.io/hankei/  
-ソース：https://github.com/okdyy75/hankei
+URL：https://okdyy75.github.io/Hankei250/  
+ソース：https://github.com/okdyy75/Hankei250
 
 **リクエスト上限**
  - 地図表示：2000回
